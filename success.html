@@ -34,8 +34,9 @@
         </div>
     </div>
 
-    <script>
-        const amloApiBaseUrl = 'amlogen-api.vercel.app'; // Your Vercel API URL
+<script>
+        // --- IMPORTANT: MAKE SURE THIS URL IS CORRECT ---
+        const amloApiBaseUrl = 'https://amlogen-api-amlolife.vercel.app'; // Your Vercel API URL
 
         const loadingState = document.getElementById('loading-state');
         const successState = document.getElementById('success-state');
@@ -47,23 +48,31 @@
         // Function to get query parameter from URL
         function getQueryParam(param) {
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(param);
+            // Mayar uses `invoice_id` but some gateways use `id`
+            return urlParams.get('invoice_id') || urlParams.get('id');
         }
 
-        // Main logic to fetch the token
-        async function fetchToken() {
-            // Mayar.id redirects with `invoice_id` in the URL
-            const invoiceId = getQueryParam('invoice_id') || getQueryParam('id'); 
+        // Main logic to finalize the purchase and get the token
+        async function finalizeAndGetToken() {
+            const invoiceId = getQueryParam('invoice_id'); 
 
             if (!invoiceId) {
                 loadingState.style.display = 'none';
                 errorState.style.display = 'block';
-                errorState.querySelector('p').textContent = 'Error: No Invoice ID found in URL.';
+                errorState.querySelector('p').textContent = 'Error: No Invoice ID found in URL. Please check your purchase receipt.';
                 return;
             }
 
             try {
-                const response = await fetch(`${amloApiBaseUrl}/api/get-token?invoiceId=${invoiceId}`);
+                // --- THIS IS THE CHANGED PART ---
+                // We now send a POST request to our new verification endpoint
+                const response = await fetch(`${amloApiBaseUrl}/api/finalize-purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ invoiceId: invoiceId })
+                });
+                // --- END OF CHANGED PART ---
+
                 const data = await response.json();
 
                 if (response.ok) {
@@ -71,7 +80,7 @@
                     loadingState.style.display = 'none';
                     successState.style.display = 'block';
                 } else {
-                    throw new Error(data.message || 'Failed to fetch token.');
+                    throw new Error(data.message || 'Failed to verify your purchase.');
                 }
             } catch (error) {
                 console.error(error);
@@ -81,7 +90,7 @@
             }
         }
         
-        // Copy to clipboard functionality
+        // Copy to clipboard functionality (no changes here)
         copyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(apiKeyDisplay.textContent).then(() => {
                 copyMessage.textContent = 'Copied to clipboard!';
@@ -91,8 +100,8 @@
             });
         });
 
-        // Run the fetch function when the page loads
-        window.onload = fetchToken;
+        // Run the function when the page loads
+        window.onload = finalizeAndGetToken;
     </script>
     <style>
         /* Add some specific styles for this page */
