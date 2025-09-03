@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AmloGen - Get Your API Key</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 AmloGen for Photoshop</h1>
+            <p>Purchase generation credits below to get your personal API Key.</p>
+        </header>
+
+        <div class="pricing-grid">
+            <div class="plan">
+                <h2>Starter</h2>
+                <p class="credits">50 Generations</p>
+                <p class="price">Rp 25.000</p>
+                <button class="buy-btn" data-product-id="50">Buy Now</button>
+            </div>
+            <div class="plan popular">
+                <h2>Pro</h2>
+                <p class="credits">150 Generations</p>
+                <p class="price">Rp 60.000</p>
+                <button class="buy-btn" data-product-id="150">Buy Now</button>
+            </div>
+            <div class="plan">
+                <h2>Max</h2>
+                <p class="credits">500 Generations</p>
+                <p class="price">Rp 150.000</p>
+                <button class="buy-btn" data-product-id="500">Buy Now</button>
+            </div>
+        </div>
+        
+        <div class="form-container" style="display: none;">
+            <h3>Enter your details to proceed</h3>
+            <input type="email" id="email" placeholder="Enter your email to receive the key" required>
+            <input type="text" id="name" placeholder="Your Name (Optional)">
+            <button id="proceed-btn">Proceed to Payment</button>
+        </div>
+
+        <p id="message"></p>
+    </div>
+
+    <script>
+        const amloApiBaseUrl = 'https://amlogen-api-amlolife.vercel.app'; // Your Vercel API URL
+        const buyButtons = document.querySelectorAll('.buy-btn');
+        const formContainer = document.querySelector('.form-container');
+        const proceedBtn = document.getElementById('proceed-btn');
+        const messageEl = document.getElementById('message');
+        let selectedProductId = null;
+
+        buyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                selectedProductId = button.dataset.productId;
+                formContainer.style.display = 'block';
+                document.getElementById('email').focus();
+            });
+        });
+
+        proceedBtn.addEventListener('click', async () => {
+            const email = document.getElementById('email').value;
+            const name = document.getElementById('name').value;
+
+            if (!email || !email.includes('@')) {
+                messageEl.textContent = 'Please enter a valid email address.';
+                return;
+            }
+
+            proceedBtn.disabled = true;
+            messageEl.textContent = 'Creating payment link, please wait...';
+
+            try {
+                const response = await fetch(`${amloApiBaseUrl}/api/create-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        productId: selectedProductId,
+                        email: email,
+                        name: name
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    window.location.href = data.paymentUrl;
+                } else {
+                    throw new Error(data.message || 'Failed to create payment link.');
+                }
+            } catch (error) {
+                messageEl.textContent = `Error: ${error.message}`;
+                proceedBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
