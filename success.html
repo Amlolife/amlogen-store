@@ -11,10 +11,97 @@
         <header>
             <h1>✅ Payment Successful!</h1>
             <p>Thank you for your purchase.</p>
-            <p>We are generating your personal API Key and have sent it to the email address you provided.</p>
-            <p>Please check your inbox (and spam folder) for an email from <strong>AmloGen</strong>.</p>
-            <p>You can now close this window.</p>
         </header>
+
+        <div id="loading-state">
+            <p class="loading-text">Finalizing your API Key, please wait...</p>
+        </div>
+
+        <div id="success-state" style="display: none;">
+            <div class="warning-box">
+                <h2>IMPORTANT: Save Your API Key!</h2>
+                <p>This is the **only time** you will see your key. Copy it and store it in a safe place, like a password manager. If you lose it, it cannot be recovered.</p>
+            </div>
+            <div class="key-container">
+                <code id="api-key-display"></code>
+                <button id="copy-btn">Copy Key</button>
+            </div>
+            <p id="copy-message"></p>
+        </div>
+
+        <div id="error-state" style="display: none;">
+            <p class="error-text">There was an issue retrieving your key. Please refresh this page. If the problem persists, please contact support with your Invoice ID.</p>
+        </div>
     </div>
+
+    <script>
+        const amloApiBaseUrl = 'https://amlogen-api-amlolife.vercel.app'; // Your Vercel API URL
+
+        const loadingState = document.getElementById('loading-state');
+        const successState = document.getElementById('success-state');
+        const errorState = document.getElementById('error-state');
+        const apiKeyDisplay = document.getElementById('api-key-display');
+        const copyBtn = document.getElementById('copy-btn');
+        const copyMessage = document.getElementById('copy-message');
+
+        // Function to get query parameter from URL
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        // Main logic to fetch the token
+        async function fetchToken() {
+            // Mayar.id redirects with `invoice_id` in the URL
+            const invoiceId = getQueryParam('invoice_id') || getQueryParam('id'); 
+
+            if (!invoiceId) {
+                loadingState.style.display = 'none';
+                errorState.style.display = 'block';
+                errorState.querySelector('p').textContent = 'Error: No Invoice ID found in URL.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${amloApiBaseUrl}/api/get-token?invoiceId=${invoiceId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    apiKeyDisplay.textContent = data.token;
+                    loadingState.style.display = 'none';
+                    successState.style.display = 'block';
+                } else {
+                    throw new Error(data.message || 'Failed to fetch token.');
+                }
+            } catch (error) {
+                console.error(error);
+                loadingState.style.display = 'none';
+                errorState.style.display = 'block';
+                errorState.querySelector('p').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Copy to clipboard functionality
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(apiKeyDisplay.textContent).then(() => {
+                copyMessage.textContent = 'Copied to clipboard!';
+                setTimeout(() => { copyMessage.textContent = ''; }, 2000);
+            }).catch(err => {
+                copyMessage.textContent = 'Failed to copy.';
+            });
+        });
+
+        // Run the fetch function when the page loads
+        window.onload = fetchToken;
+    </script>
+    <style>
+        /* Add some specific styles for this page */
+        .loading-text, .error-text { text-align: center; font-size: 1.1em; padding: 20px; }
+        .warning-box { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .key-container { display: flex; align-items: center; gap: 10px; background: #f0f0f0; padding: 10px; border-radius: 5px; }
+        #api-key-display { font-family: monospace; font-size: 1.1em; word-break: break-all; flex-grow: 1; }
+        #copy-btn { background-color: #3498db; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+        #copy-message { text-align: center; margin-top: 10px; color: #2ecc71; height: 1em; }
+    </style>
 </body>
 </html>
